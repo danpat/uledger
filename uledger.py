@@ -5,10 +5,12 @@ import re
 import decimal
 import sys
 from collections import namedtuple
+import datetime
 
 Amount = namedtuple("Amount", ["commodity","value"])
 Post = namedtuple('Post', ['account', "amount","filename","linenum"])
 Transaction = namedtuple("Transaction",["date","description","linenum","filename"])
+Entry = namedtuple('Entry',['description','amount'])
 
 class ParseError(Exception):
     def __init__(self, filename, linenum, msg):
@@ -43,11 +45,12 @@ class Ledger(object):
     aliases = {}
     commodities = set()
 
-    def __init__(self):
+    def __init__(self, assertions=True):
         self.transactions = {}
         self.accounts = {}
         self.aliases = {}
         self.commodities = set()
+        self.assertions = assertions
 
     def parseamount(self, amountstr, filename, linenum):
         m = re.match("\((.*?)\)",amountstr)
@@ -78,15 +81,14 @@ class Ledger(object):
         raise ParseError(filename, linenum, "Don't know how to interpret '%s' as a value, did you include a commodity type ($, USD, etc)?" % amountstr)
         return None
     
-    def makepost(self, account,date,commodity,amount):
+    def makepost(self, account,date,description,commodity,value):
         self.commodities.add(commodity)
         if account not in self.accounts:
             self.accounts[account] = {}
         if date not in self.accounts[account]:
-            self.accounts[account][date] = {}
-        if commodity not in self.accounts[account][date]:
-            self.accounts[account][date][commodity] = []
-        self.accounts[account][date][commodity].append(amount)
+            self.accounts[account][date] = []
+
+        self.accounts[account][date].append(Entry(description,Amount(commodity,value)))
     
     
     # We lexically sort the date keys, and start from
@@ -102,17 +104,17 @@ class Ledger(object):
         for date in datekeys:
             # We assumd 2015-02-32 which will compare lexically
             if asof is None or date <= asof:
-                for commodity in self.accounts[account][date]:
-                    if commodity not in balances:
-                        balances[commodity] = 0
-                    balances[commodity] += sum(self.accounts[account][date][commodity])
+                for entry in self.accounts[account][date]:
+                    if entry.amount.commodity not in balances:
+                        balances[entry.amount.commodity] = 0
+                    balances[entry.amount.commodity] += entry.amount.value
             else:
                 break
         return balances
 
     def maketransaction(self, transaction, posts, bucket = None):
         balanceaccount = bucket
-        amounts = {}
+        values = {}
         if len(posts) == 0 or len(posts) == 1 and posts[0].amount.commodity is None:
             raise ParseError(transaction.filename, transaction.linenum, "No transactions")
     
@@ -126,19 +128,19 @@ class Ledger(object):
                 else:
                     raise ParseError(post.filename, post.linenum, "Cannot have multiple empty posts")
             else:
-                if post.amount.commodity not in amounts:
-                    amounts[post.amount.commodity] = 0
+                if post.amount.commodity not in values:
+                    values[post.amount.commodity] = 0
     
-                amounts[post.amount.commodity] += post.amount.value
+                values[post.amount.commodity] += post.amount.value
     
-                self.makepost(account, transaction.date, post.amount.commodity, post.amount.value)
+                self.makepost(account, transaction.date, transaction.description, post.amount.commodity, post.amount.value)
     
-        for commodity in amounts:
-            if amounts[commodity] != decimal.Decimal("0"):
+        for commodity in values:
+            if values[commodity] != decimal.Decimal("0"):
                 if balanceaccount is not None:
-                    self.makepost(balanceaccount, transaction.date, commodity, -amounts[commodity])
+                    self.makepost(balanceaccount, transaction.date, transaction.description, commodity, -values[commodity])
                 else:
-                    raise ParseError(post.filename, post.linenum, "Transaction does not balance: %f %s outstanding" % (amounts[commodity], commodity))
+                    raise ParseError(post.filename, post.linenum, "Transaction does not balance: %f %s outstanding" % (values[commodity], commodity))
     
     # Parses a file, can be called recursively
     def parse(self, reader,filename=None):
@@ -203,6 +205,11 @@ class Ledger(object):
             if m:
                 bucket = m.group("account")
                 continue
+
+            m = re.match("print\s+(?P<str>.*)",line)
+            if m:
+                print m.group("str")
+                continue
     
             m = re.match("alias\s+(?P<alias>.*?)\s+(?P<account>.*)",line)
             if m:
@@ -211,6 +218,8 @@ class Ledger(object):
 
             m = re.match("assert\s+balance\s+(?P<asof>\d{4}-\d{2}-\d{2})?\s*(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
             if m:
+                if not self.assertions:
+                    continue
                 balance = self.balance(m.group("account"),m.group("asof"))
                 amount = self.parseamount(m.group("amount"),filename,linenum)
 
@@ -231,12 +240,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=' some integers.')
     parser.add_argument('-f','--filename', required=True, help='filename to load')
-    parser.add_argument('-r','--reverse', help='reverse order of transactions')
-    parser.add_argument("command", default='balance', choices=['balance'])
+    parser.add_argument("command", default='balance', choices=['balance','register'])
+    parser.add_argument('-a','--account', help='Apply to which account')
+    parser.add_argument('-s','--start', help='Start at which date')
+    parser.add_argument('-e','--end', help='End at which date')
 
     args = parser.parse_args()
 
-    ledger = Ledger()
+    if args.command == "register":
+        ledger = Ledger(assertions=False)
+    else:
+        ledger = Ledger()
+
     try:
         with open(args.filename) as f:
             ledger.parse(f,args.filename)
@@ -268,3 +283,44 @@ if __name__ == "__main__":
                 else:
                     print "-".rjust(10," "),
             print account
+
+    elif args.command == "register":
+        accountkeys = ledger.accounts.keys()
+        accountkeys.sort()
+
+        firstdate = None
+        startdate = args.start
+        enddate = args.end
+        balances = {}
+        # If no start date, find the earliest/last as bounds
+        for account in ledger.accounts:
+            balances[account] = {}
+            datekeys = ledger.accounts[account].keys()
+            datekeys.sort()
+            if firstdate is None or datekeys[0] < firstdate:
+                firstdate = datekeys[0]
+            if args.end is None and (enddate is None or datekeys[-1] < startdate):
+                enddate = datekeys[-1]
+
+        if startdate is None:
+            startdate = firstdate
+
+        firstdate = datetime.datetime.strptime( firstdate, "%Y-%m-%d" )
+        startdate = datetime.datetime.strptime( startdate, "%Y-%m-%d" )
+        enddate = datetime.datetime.strptime( enddate, "%Y-%m-%d" )
+
+
+        while firstdate <= enddate:
+            today = firstdate.strftime("%Y-%m-%d")
+            for account in ledger.accounts:
+                if args.account is None or args.account == account:
+                    if today in ledger.accounts[account]:
+                        for transaction in ledger.accounts[account][today]:
+                            if transaction.amount.commodity not in balances[account]:
+                                balances[account][transaction.amount.commodity] = 0
+                            balances[account][transaction.amount.commodity] += transaction.amount.value
+
+                            if firstdate >= startdate:
+                                print today, str(balances[account][transaction.amount.commodity]).rjust(8," "), transaction.amount.commodity, str(transaction.amount.value).rjust(8," "), transaction.description
+
+            firstdate += datetime.timedelta(days=1)
