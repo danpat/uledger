@@ -35,6 +35,13 @@ class Parsing(LedgerTest):
         with self.assertRaises(uledger.ParseError):
             self.ledger.parse(data.splitlines(), "TESTDATA")
 
+    def test_multiblank(self):
+        data = """2015-01-01 Dummy
+            Source
+            Dest"""
+        with self.assertRaises(uledger.ParseError):
+            self.ledger.parse(data.splitlines(), "TESTDATA")
+
     def test_spacing(self):
         data = """2015-06-01\tDuummy transaction
         \tSrc\t\t$1234
