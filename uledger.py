@@ -227,19 +227,16 @@ if __name__ == "__main__":
         for account in accountkeys:
             maxlen = max(maxlen,len(account))
 
-        print "Account".ljust(maxlen+1," "),
         for commodity in ledger.commodities:
             print commodity.rjust(10," "),
-        print
-
+        print "Account".ljust(maxlen+1," ")
         print "-" * (maxlen+1 + len(ledger.commodities)*11)
         for account in accountkeys:
             #print ":".join(reversed(account.split(":"))).rjust(maxlen+1," "),
-            print account.ljust(maxlen+1,"."),
             b = ledger.balance(account)
-            for i, commodity in enumerate(b):
+            for i, commodity in enumerate(ledger.commodities):
                 if commodity in b:
                     print str(b[commodity]).rjust(10," "),
                 else:
-                    print " " * 10,
-            print
+                    print "x".rjust(10," "),
+            print account.ljust(maxlen+1,".")
