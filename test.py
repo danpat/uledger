@@ -87,6 +87,29 @@ class Math(LedgerTest):
         balance = self.ledger.balance("Dest")
         self.assertEquals(balance, {"$": decimal.Decimal("-6.79")})
 
+    def test_assert1(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance SourceAccount  $50
+        assert balance DestAccount  $-50""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+    def test_assert2(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance SourceAccount  $33
+        assert balance DestAccount  $50""")
+
+        with self.assertRaises(uledger.AssertionError):
+            self.ledger.parse(data.splitlines(),"TESTDATA")
+
 
     def test_nobalance(self):
         data = textwrap.dedent("""

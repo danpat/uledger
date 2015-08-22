@@ -42,6 +42,14 @@ bucket Assets:Checking Account
 2016-06-03 Groceries again
     Expenses:Groceries   $32.73
 
+
+; You can verify balances using the 'assert balance' command
+; This will check that the balance of the account using everything
+; seen so far matches what you've got.  This can be useful for verifying
+; against account balances from your bank after you've entered a bunch
+; of transactions.
+assert balance Expenses:Groceries  $43.23
+
 ; You can define alias shortcuts (just single words)
 alias groceries Expenses:Groceries
 2015-06-04 Even more groceries

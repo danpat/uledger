@@ -18,6 +18,15 @@ class ParseError(Exception):
     def __str__(self):
         return "ERROR: %s:%s: %s" % (self.filename, self.linenum, self.msg)
 
+class AssertionError(Exception):
+    def __init__(self, filename, linenum, msg):
+        self.msg = msg
+        self.filename = filename
+        self.linenum = linenum
+    def __str__(self):
+        return "ASSERT FAILED: %s:%s: %s" % (self.filename, self.linenum, self.msg)
+
+
 class AccountNotFoundError(Exception):
     def __init__(self, account):
         self.account = account
@@ -199,8 +208,16 @@ class Ledger(object):
             if m:
                 self.aliases[m.groups()[0]] = m.groups()[1]
                 continue
+
+            m = re.match("assert\s+balance\s+(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
+            if m:
+                balance = self.balance(m.group("account"))
+                amount = self.parseamount(m.group("amount"),filename,linenum)
+                if amount.commodity not in balance or balance[amount.commodity] != amount.value:
+                    raise AssertionError(filename, linenum, "Account %s balance of %s does not match %s" % (m.group("account"),repr(balance), repr(amount)))
+                continue
     
-            raise ParseError(filename, linenum, "Don't know how to process \"%s\"" % line)
+            raise ParseError(filename, linenum, "Don't know how to parse \"%s\"" % line)
     
         if transaction is not None:
             self.maketransaction(transaction,posts,bucket)
@@ -216,8 +233,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ledger = Ledger()
-    with open(args.filename) as f:
-        ledger.parse(f,args.filename)
+    try:
+        with open(args.filename) as f:
+            ledger.parse(f,args.filename)
+    except AssertionError,e:
+        print "ASSERTION FAILED: ",e.msg
+        sys.exit(1)
+    except ParseError,e:
+        print "PARSE ERROR: ",e.msg
+        sys.exit(1)
 
     if args.command == "balance":
         accountkeys = ledger.accounts.keys()
