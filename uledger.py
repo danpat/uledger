@@ -4,6 +4,19 @@ import argparse
 import re
 import decimal
 import sys
+from collections import namedtuple
+
+Amount = namedtuple("Amount", ["commodity","value"])
+Post = namedtuple('Post', ['account', "amount","filename","linenum"])
+Transaction = namedtuple("Transaction",["date","description","linenum","filename"])
+
+class ParseError(Exception):
+    def __init__(self, filename, linenum, msg):
+        self.msg = msg
+        self.filename = filename
+        self.linenum = linenum
+    def __str__(self):
+        return "ERROR: %s:%s: %s" % (self.filename, self.linenum, self.msg)
 
 
 # This is a dict of dates
@@ -21,25 +34,25 @@ def parseamount(amountstr):
         if m:
             a = parseamount(m.groups()[0])
             b = parseamount(m.groups()[1])
-            return (a[0],a[1]+b[1])
+            return Amount(a.commodity,a.value+b.value)
 
         m = re.match("\((.*?) +\* +(-?\d+(\.\d+)?) *\)",amountstr)
         if m:
             a = parseamount(m.groups()[0])
             b = decimal.Decimal(m.groups()[1])
-            return (a[0],(a[1]*b).quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_HALF_UP))
+            return Amount(a.commodity,(a.value*b).quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_HALF_UP))
 
     # $-1234.34
     m = re.match("(\$) *(-?\d+(\.\d+)?)",amountstr)
     if m:
-        return (m.groups()[0],decimal.Decimal(m.groups()[1]))
+        return Amount(m.groups()[0],decimal.Decimal(m.groups()[1]))
 
     # -123.43 CAD
     m = re.match("(-?\d+(\.\d+)?) (\w+)",amountstr)
     if m:
-        return (m.groups()[-1],decimal.Decimal(m.groups()[0]))
+        return Amount(m.groups()[-1],decimal.Decimal(m.groups()[0]))
 
-def post(account,date,commodity,amount):
+def makepost(account,date,commodity,amount):
 
     commodities.add(commodity)
 
@@ -73,122 +86,113 @@ def balance(account,asof=None):
             break
     return balances
 
+def maketransaction(transaction, posts, bucket = None):
+    balanceaccount = bucket
+    amounts = {}
+    if len(posts) == 0 or len(posts) == 1 and posts[0].amount.commodity is None:
+        raise ParseError(transaction.filename, transaction.linenum, "No transactions")
+
+    for post in posts:
+        account = post.account
+        if account in aliases:
+            account = aliases[post.account]
+        if post.amount is None or post.amount.value is None:
+            if balanceaccount is None or balanceaccount == bucket:
+                balanceaccount = account
+            else:
+                raise ParseError(post.filename, post.linenum, "Cannot have multiple empty posts")
+        else:
+            if post.amount is None:
+                raise ParseError(post.filename, post.linenum, "Could not understand \"%s\"" % p[2])
+            if post.amount.commodity not in amounts:
+                amounts[post.amount.commodity] = 0
+
+            amounts[post.amount.commodity] += post.amount.value
+
+            makepost(account, transaction.date, post.amount.commodity, post.amount.value)
+            #print (transaction[0],) + (acct,) + amount
+
+    for commodity in amounts:
+        if amounts[commodity] != decimal.Decimal("0"):
+            if balanceaccount is not None:
+                #print "Balancing post:", (transaction[0],) + (balanceacct,) + (key, amounts[key]*-1)
+                makepost(balanceaccount, transaction.date, commodity, -amounts[commodity])
+            else:
+                raise ParseError(post.filename, post.linenum, "Transaction does not balance: %f %s outstanding" % (amounts[commodity], commodity))
 
 # Parses a file, can be called recursively
-def parse(filename):
+def parse(reader,filename=None):
+
     bucket = None
+    transaction = None
+    accountdef = None
+    posts = []
+    for linenum, line in enumerate(reader):
 
-    with open(filename) as f:
-        transaction = None
-        accountdef = None
-        posts = []
-        for linenum, line in enumerate(f):
-
-            line = line.rstrip()
-            # print "#%s" % line
-            m = re.match(" *;", line)
-            if line == '' or m:
-                continue
+        line = line.rstrip()
+        # print "#%s" % line
+        m = re.match(" *;", line)
+        if line == '' or m:
+            continue
 
 
-            if transaction is not None:
-                m = re.match("^ +(\w.+?)(  +(.*))?$", line)
-                if m:
-                    posts.append(m.groups())
-                    continue
-                else:
-                    balanceacct = None
-                    amounts = {}
-                    if len(posts) == 0 or len(posts) == 1 and posts[0][2] is None:
-                        print "ERROR: %s:%d" % (filename, linenum)
-                        print "No transactions"
-                        sys.exit(1)
-
-                    for p in posts:
-                        acct = p[0]
-                        if acct in aliases:
-                            acct = aliases[p[0]]
-                        if p[2] == "" or p[2] is None:
-                            if balanceacct is None:
-                                balanceacct = acct
-                            else:
-                                print "ERROR %s:%d" % (filename, linenum)
-                                print "Cannot have multiple empty posts"
-                                sys.exit(1)
-                        else:
-                            amount = parseamount(p[2])
-                            if amount is None:
-                                print "ERROR %s:%d" % (filename, linenum)
-                                print "Could not parse \"%s\"" % p[2]
-                                sys.exit(1)
-                            if amount[0] not in amounts:
-                                amounts[amount[0]] = 0
-
-                            amounts[amount[0]] += amount[1]
-
-                            post(acct, transaction[0], amount[0], amount[1])
-                            #print (transaction[0],) + (acct,) + amount
-
-                    for key in amounts:
-                        if amounts[key] != decimal.Decimal("0"):
-                            if balanceacct is not None:
-                                #print "Balancing post:", (transaction[0],) + (balanceacct,) + (key, amounts[key]*-1)
-                                post(balanceacct, transaction[0], key, amounts[key]*-1)
-                            elif bucket is not None:
-                                #print "Balancing bucket post:", (transaction[0],) + (bucket,) + (key, amounts[key]*-1)
-                                post(bucket, transaction[0], key, amounts[key]*-1)
-                            else:
-                                print "ERROR %s:%d" % (filename, linenum)
-                                print "Transaction does not balance: %f %s outstanding" % (amounts[key], key)
-                                sys.exit(1)
-
-
-                    posts = []
-                    transaction = None
-                    balanceacct = None
-
-            if accountdef is not None:
-                m = re.match("^ +(.*)$",line)
-                if m:
-                    continue
-                else:
-                    accountdef = None
-
-            m = re.match("(\d{4}-\d{2}-\d{2})(=\d{4}-\d{2}-\d{2})? +(.*)", line)
+        if transaction is not None:
+            m = re.match("^ +(\w.+?)(  +(.*))?$", line)
             if m:
-                transaction = m.groups()
+                print m.groups()
+                amount = None
+                if m.groups()[2] is not None:
+                    amount = parseamount(m.groups()[2])
+                post = Post(m.groups()[0],amount,filename,linenum)
+                posts.append(post)
                 continue
+            else:
+                maketransaction(transaction, posts, bucket)
+                posts = []
+                transaction = None
 
-            m = re.match("commodity +(.*)", line)
+        if accountdef is not None:
+            m = re.match("^ +(.*)$",line)
             if m:
                 continue
+            else:
+                accountdef = None
 
-            m = re.match("account +(.*)", line)
-            if m:
-                accountdef = m.groups()
-                continue
+        m = re.match("(\d{4}-\d{2}-\d{2})(=\d{4}-\d{2}-\d{2})? +(.*)", line)
+        if m:
+            transaction = Transaction(m.groups()[0],m.groups()[1],filename,linenum)
+            continue
 
-            m = re.match("include (.*)",line)
-            if m:
-                parse(m.groups()[0])
-                continue
+        m = re.match("commodity +(.*)", line)
+        if m:
+            continue
 
-            m = re.match("bucket (.*)",line)
-            if m:
-                bucket = m.groups()[0]
-                continue
+        m = re.match("account +(.*)", line)
+        if m:
+            accountdef = m.groups()
+            continue
 
-            m = re.match("alias +(.*?) +(.*)",line)
-            if m:
-                aliases[m.groups()[0]] = m.groups()[1]
-                continue
+        m = re.match("include (.*)",line)
+        if m:
+            includefile = m.groups()[0]
+            with open(includefile) as f:
+                parse(f,includefile)
+            continue
 
-            print "ERROR on line %s:%d" % (filename,linenum+1)
-            print "    -> %s" % line
-            sys.exit(1)
+        m = re.match("bucket (.*)",line)
+        if m:
+            bucket = m.groups()[0]
+            continue
 
-def balances():
-    None
+        m = re.match("alias +(.*?) +(.*)",line)
+        if m:
+            aliases[m.groups()[0]] = m.groups()[1]
+            continue
+
+        raise ParseError(filename, linenum, "Don't know how to process \"%s\"" % line)
+
+    if transaction is not None:
+        maketransaction(transaction,posts,bucket)
 
 
 
@@ -201,7 +205,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    parse(args.filename)
+    with open(args.filename) as f:
+        parse(f,args.filename)
 
     if args.command == "balance":
         accountkeys = accounts.keys()
