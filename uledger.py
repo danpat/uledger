@@ -239,4 +239,4 @@ if __name__ == "__main__":
                     print str(b[commodity]).rjust(10," "),
                 else:
                     print "x".rjust(10," "),
-            print account.ljust(maxlen+1,".")
+            print account

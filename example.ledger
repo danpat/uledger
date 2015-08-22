@@ -1,0 +1,58 @@
+; Personal book-keeping typically has 4 account types:
+;    Expense   : where you record what you spent.
+;    Income    : where you got money from others.
+;    Asset     : money you have right now
+;    Liability : money you owe to others
+;
+; Business bookkeeping adds a 5th type:
+;    Equity    : assets supplied by the owners
+;
+; The rules are:
+;  - When you buy something, add value to the expense account
+;    and subtract it from the source of the funds
+;  - When you receive income, subtract it from the income account
+;    and add it to the account it went to
+;
+; Income accounts read negative the more money you receive 
+;     (i.e. the source of the income, your job, has less money)
+; Expense accounts go positive as you spend more money
+; Liability accounts to more negative as you owe more money
+; Asset accounts go more positive as you have more money
+
+; You can record this two ways:
+2015-05-30  Salary
+    ; Recording the gross pay here makes it easier to just look at your books
+    ; when it comes time to fill in your tax forms at the end of the year
+    Income:Day Job      $-1000
+    Expenses:Federal income tax withheld  $100
+    Expenses:State income tax withheld  $100
+    Assets:Checking Account
+
+2015-06-01  Groceries
+    Expenses:Groceries   $22
+    Assets:Checking Account
+
+2015-06-02  Car servicing
+    Expenses:Vehicle    $422.98
+    Liabilities:VISA
+
+; The bucket command sets a default balancing account.  Unbalanced transactions
+; will be balanced with an amount to this account.
+bucket Assets:Checking Account
+2016-06-03 Groceries again
+    Expenses:Groceries   $32.73
+
+; You can define alias shortcuts (just single words)
+alias groceries Expenses:Groceries
+2015-06-04 Even more groceries
+    groceries  $23.99
+
+; In my state, if you buy something online, you often don't
+; pay sales tax  on it.  However, technically you still owe
+; the 6% tax.  This shows how to track that outstanding
+; liability so you can send payment to the tax department
+; at the end of the year
+; Note that the "bucket" account is still in effect
+2015-02-05 Chair from amazon
+    Expenses:Office  ($139 * 1.06)
+    Liabilities:State Sales Tax  ($1.39 * -0.06)
