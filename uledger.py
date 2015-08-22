@@ -228,7 +228,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=' some integers.')
     parser.add_argument('-f','--filename', required=True, help='filename to load')
     parser.add_argument('-r','--reverse', help='reverse order of transactions')
-    parser.add_argument("command", default='validate', choices=['balance', 'parse', 'validate'])
+    parser.add_argument("command", default='balance', choices=['balance'])
 
     args = parser.parse_args()
 
@@ -262,5 +262,5 @@ if __name__ == "__main__":
                 if commodity in b:
                     print str(b[commodity]).rjust(10," "),
                 else:
-                    print "x".rjust(10," "),
+                    print "-".rjust(10," "),
             print account
