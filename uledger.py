@@ -53,27 +53,27 @@ class Ledger(object):
         m = re.match("\((.*?)\)",amountstr)
         if m:
             # $1234.12 + $123432.23
-            m = re.match("\(\s*(.*?)\s+\+\s+(.*?)\s*\)",amountstr)
+            m = re.match("\(\s*(?P<left>.*?)\s+\+\s+(?P<right>.*?)\s*\)",amountstr)
             if m:
-                a = self.parseamount(m.groups()[0],filename,linenum)
-                b = self.parseamount(m.groups()[1],filename,linenum)
+                a = self.parseamount(m.group("left"),filename,linenum)
+                b = self.parseamount(m.group("right"),filename,linenum)
                 return Amount(a.commodity,a.value+b.value)
     
-            m = re.match("\(\s*(.*?)\s+\*\s+(-?\d+(\.\d+)?)\s*\)",amountstr)
+            m = re.match("\(\s*(?P<left>.*?)\s+\*\s+(?P<right>-?\d+(\.\d+)?)\s*\)",amountstr)
             if m:
-                a = self.parseamount(m.groups()[0],filename,linenum)
-                b = decimal.Decimal(m.groups()[1])
+                a = self.parseamount(m.group("left"),filename,linenum)
+                b = decimal.Decimal(m.group("right"))
                 return Amount(a.commodity,(a.value*b).quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_HALF_UP))
     
         # $-1234.34
-        m = re.match("(\$)\s*(-?\d+(\.\d+)?)",amountstr)
+        m = re.match("(?P<commodity>\$)\s*(?P<value>-?\d+(\.\d+)?)",amountstr)
         if m:
-            return Amount(m.groups()[0],decimal.Decimal(m.groups()[1]))
+            return Amount(m.group("commodity"),decimal.Decimal(m.group("value")))
     
         # -123.43 CAD
-        m = re.match("(-?\d+(\.\d+)?) (\w+)",amountstr)
+        m = re.match("(?P<value>-?\d+(\.\d+)?) (?P<commodity>\w+)",amountstr)
         if m:
-            return Amount(m.groups()[-1],decimal.Decimal(m.groups()[0]))
+            return Amount(m.group("commodity"),decimal.Decimal(m.group("value")))
 
         raise ParseError(filename, linenum, "Don't know how to interpret '%s' as a value, did you include a commodity type ($, USD, etc)?" % amountstr)
         return None
@@ -126,8 +126,6 @@ class Ledger(object):
                 else:
                     raise ParseError(post.filename, post.linenum, "Cannot have multiple empty posts")
             else:
-                if post.amount is None:
-                    raise ParseError(post.filename, post.linenum, "Could not understand \"%s\"" % p[2])
                 if post.amount.commodity not in amounts:
                     amounts[post.amount.commodity] = 0
     
@@ -158,12 +156,12 @@ class Ledger(object):
     
 
             if transaction is not None:
-                m = re.match("^\s+(.*?)(\s\s+(.*))?$", line)
+                m = re.match("^\s+(?P<account>.*?)(\s\s+(?P<amount>.*))?$", line)
                 if m:
                     amount = None
-                    if m.groups()[2] is not None:
-                        amount = self.parseamount(m.groups()[2],filename,linenum)
-                    post = Post(m.groups()[0],amount,filename,linenum)
+                    if m.group("amount") is not None:
+                        amount = self.parseamount(m.group("amount"),filename,linenum)
+                    post = Post(m.group("account"),amount,filename,linenum)
                     posts.append(post)
                     continue
                 else:
@@ -172,41 +170,42 @@ class Ledger(object):
                     transaction = None
     
             if accountdef is not None:
+                # Ignore things under accountdef for now
                 m = re.match("^\s+(.*)$",line)
                 if m:
                     continue
                 else:
                     accountdef = None
     
-            m = re.match("(\d{4}-\d{2}-\d{2})(=\d{4}-\d{2}-\d{2})?\s+(.*)", line)
+            m = re.match("(?P<date>\d{4}-\d{2}-\d{2})(?P<postdate>=\d{4}-\d{2}-\d{2})?\s+(?P<description>.*)", line)
             if m:
-                transaction = Transaction(m.groups()[0],m.groups()[1],filename,linenum)
+                transaction = Transaction(m.group("date"),m.group("description"),filename,linenum)
                 continue
     
-            m = re.match("commodity\s+(.*)", line)
+            m = re.match("commodity\s+(?P<commodity>.*)", line)
             if m:
                 continue
     
-            m = re.match("account\s+(.*)", line)
+            m = re.match("account\s+(?P<account>.*)", line)
             if m:
                 accountdef = m.groups()
                 continue
     
-            m = re.match("include\s+(.*)",line)
+            m = re.match("include\s+(?P<filename>.*)",line)
             if m:
-                includefile = m.groups()[0]
+                includefile = m.group("filename")
                 with open(includefile) as f:
                     self.parse(f,includefile)
                 continue
     
-            m = re.match("bucket\s+(.*)",line)
+            m = re.match("bucket\s+(?P<account>.*)",line)
             if m:
-                bucket = m.groups()[0]
+                bucket = m.group("account")
                 continue
     
-            m = re.match("alias\s+(.*?)\s+(.*)",line)
+            m = re.match("alias\s+(?P<alias>.*?)\s+(?P<account>.*)",line)
             if m:
-                self.aliases[m.groups()[0]] = m.groups()[1]
+                self.aliases[m.group("alias")] = m.group("account")
                 continue
 
             m = re.match("assert\s+balance\s+(?P<asof>\d{4}-\d{2}-\d{2})?\s*(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
