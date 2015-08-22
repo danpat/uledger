@@ -42,6 +42,42 @@ class Parsing(LedgerTest):
         with self.assertRaises(uledger.ParseError):
             self.ledger.parse(data.splitlines(), "TESTDATA")
 
+    def test_bucketblank(self):
+        data = textwrap.dedent("""
+        bucket Dest
+        2015-01-01 Dummy
+            Source  $50
+            Dest""")
+        self.ledger.parse(data.splitlines(), "TESTDATA")
+
+    def test_bucketblank(self):
+        data = textwrap.dedent("""
+        bucket Dest
+        2015-01-01 Dummy
+            Source  $50
+            Dest2""")
+        self.ledger.parse(data.splitlines(), "TESTDATA")
+        balance = self.ledger.balance("Dest2")
+        self.assertEquals(balance, {"$": -50 })
+        with self.assertRaises(uledger.AccountNotFoundError):
+            balance = self.ledger.balance("Dest")
+
+
+    def test_bucket(self):
+        data = textwrap.dedent("""
+        bucket Dest
+        2015-01-01 Dummy
+            Source  $50
+            Dest2
+            
+        2015-01-02 Dummy2
+            Source  $50""")
+        self.ledger.parse(data.splitlines(), "TESTDATA")
+        balance = self.ledger.balance("Dest2")
+        self.assertEquals(balance, {"$": -50 })
+        balance = self.ledger.balance("Dest")
+        self.assertEquals(balance, {"$": -50 })
+
     def test_spacing(self):
         data = """2015-06-01\tDuummy transaction
         \tSrc\t\t$1234
