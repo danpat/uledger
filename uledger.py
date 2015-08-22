@@ -101,7 +101,7 @@ class Ledger(object):
         datekeys.sort()
         for date in datekeys:
             # We assumd 2015-02-32 which will compare lexically
-            if asof is None or date < asof:
+            if asof is None or date <= asof:
                 for commodity in self.accounts[account][date]:
                     if commodity not in balances:
                         balances[commodity] = 0
@@ -209,14 +209,18 @@ class Ledger(object):
                 self.aliases[m.groups()[0]] = m.groups()[1]
                 continue
 
-            m = re.match("assert\s+balance\s+(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
+            m = re.match("assert\s+balance\s+(?P<asof>\d{4}-\d{2}-\d{2})?\s*(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
             if m:
-                balance = self.balance(m.group("account"))
+                balance = self.balance(m.group("account"),m.group("asof"))
                 amount = self.parseamount(m.group("amount"),filename,linenum)
-                if amount.commodity not in balance or balance[amount.commodity] != amount.value:
+
+                if amount.value == 0 and amount.commodity not in balance:
+                    None
+                elif amount.commodity not in balance or balance[amount.commodity] != amount.value:
                     raise AssertionError(filename, linenum, "Account %s balance of %s does not match %s" % (m.group("account"),repr(balance), repr(amount)))
+
                 continue
-    
+
             raise ParseError(filename, linenum, "Don't know how to parse \"%s\"" % line)
     
         if transaction is not None:

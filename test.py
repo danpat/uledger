@@ -110,6 +110,50 @@ class Math(LedgerTest):
         with self.assertRaises(uledger.AssertionError):
             self.ledger.parse(data.splitlines(),"TESTDATA")
 
+    def test_assert3(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2014-12-31 SourceAccount  $0
+        assert balance 2015-01-02 SourceAccount  $50""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+    def test_assert4(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2014-12-31 SourceAccount  $0
+        assert balance 2015-01-02 SourceAccount  $60""")
+
+        with self.assertRaises(uledger.AssertionError):
+            self.ledger.parse(data.splitlines(),"TESTDATA")
+
+    def test_assert5(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2014-12-31 SourceAccount  $20""")
+
+        with self.assertRaises(uledger.AssertionError):
+            self.ledger.parse(data.splitlines(),"TESTDATA")
+
+    def test_assert6(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2015-01-01 SourceAccount  $50""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
 
     def test_nobalance(self):
         data = textwrap.dedent("""
