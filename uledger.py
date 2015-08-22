@@ -148,6 +148,7 @@ class Ledger(object):
         accountdef = None
         posts = []
         for linenum, line in enumerate(reader):
+            linenum += 1
     
             line = line.rstrip()
             m = re.match(" *;", line)
@@ -216,7 +217,7 @@ class Ledger(object):
                 if amount.value == 0 and amount.commodity not in balance:
                     None
                 elif amount.commodity not in balance or balance[amount.commodity] != amount.value:
-                    raise AssertionError(filename, linenum, "Account %s balance of %s does not match %s" % (m.group("account"),repr(balance), repr(amount)))
+                    raise AssertionError(filename, linenum, "Account %s actual balance of %s does not match assertion value %s" % (m.group("account"),repr(balance), repr(amount)))
 
                 continue
 
@@ -240,10 +241,10 @@ if __name__ == "__main__":
         with open(args.filename) as f:
             ledger.parse(f,args.filename)
     except AssertionError,e:
-        print "ASSERTION FAILED: ",e.msg
+        print e
         sys.exit(1)
     except ParseError,e:
-        print "PARSE ERROR: ",e.msg
+        print e
         sys.exit(1)
 
     if args.command == "balance":
