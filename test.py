@@ -198,6 +198,36 @@ class Math(LedgerTest):
         self.ledger.parse(data.splitlines(),"TESTDATA")
 
 
+    def test_assert7(self):
+        # Testing out of order transactions
+        data = textwrap.dedent("""
+        2015-01-07 Test
+            SourceAccount   $24
+            DestAccount
+
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2015-01-02 SourceAccount  $50
+        assert balance 2015-01-07 SourceAccount  $74
+
+        2015-01-03 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2015-01-07 SourceAccount  $124
+
+        2015-01-01 Test
+            SourceAccount   $50
+            DestAccount
+
+        assert balance 2015-01-07 SourceAccount  $174
+        """)
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+
     def test_nobalance(self):
         data = textwrap.dedent("""
         2015-01-01 Test
