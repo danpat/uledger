@@ -84,6 +84,20 @@ class Parsing(LedgerTest):
         \tDest"""
         self.ledger.parse(data.splitlines(),"TESTDATA")
 
+    # For example, credit cards.  The event was on the 1st, the charge landed on the 3rd
+    def test_postdates(self):
+        data = """2015-06-01=2015-06-03  Some kind of payment
+        Source  $50
+        Dest"""
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+        balance = self.ledger.balance("Dest")
+        self.assertEquals(balance, {"$": -50 })
+
+        balance = self.ledger.balance("Dest","2015-06-02")
+        self.assertEquals(balance, {})
+
 class Math(LedgerTest):
 
     def test_basic(self):
@@ -290,7 +304,6 @@ class Math(LedgerTest):
         self.assertEquals(balance, {"$": 50, "CAD": 50 })
         balance = self.ledger.balance("DestAccount")
         self.assertEquals(balance, {"$": -50, "CAD": -50 })
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -182,7 +182,10 @@ class Ledger(object):
     
             m = re.match("(?P<date>\d{4}-\d{2}-\d{2})(?P<postdate>=\d{4}-\d{2}-\d{2})?\s+(?P<description>.*)", line)
             if m:
-                transaction = Transaction(m.group("date"),m.group("description"),filename,linenum)
+                if m.group("postdate") is not None:
+                    transaction = Transaction(m.group("postdate"),m.group("description"),filename,linenum)
+                else:
+                    transaction = Transaction(m.group("date"),m.group("description"),filename,linenum)
                 continue
     
             m = re.match("commodity\s+(?P<commodity>.*)", line)
@@ -322,5 +325,7 @@ if __name__ == "__main__":
 
                             if firstdate >= startdate:
                                 print today, str(balances[account][transaction.amount.commodity]).rjust(8," "), transaction.amount.commodity, str(transaction.amount.value).rjust(8," "), transaction.description
+                                if args.account is None:
+                                    print "\t",account
 
             firstdate += datetime.timedelta(days=1)
