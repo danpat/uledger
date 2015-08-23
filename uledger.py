@@ -302,7 +302,7 @@ if __name__ == "__main__":
             datekeys.sort()
             if firstdate is None or datekeys[0] < firstdate:
                 firstdate = datekeys[0]
-            if args.end is None and (enddate is None or datekeys[-1] < startdate):
+            if args.end is None and (enddate is None or datekeys[-1] > enddate):
                 enddate = datekeys[-1]
 
         if startdate is None:
