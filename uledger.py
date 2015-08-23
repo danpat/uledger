@@ -180,7 +180,7 @@ class Ledger(object):
                 else:
                     accountdef = None
     
-            m = re.match("(?P<date>\d{4}-\d{2}-\d{2})(?P<postdate>=\d{4}-\d{2}-\d{2})?\s+(?P<description>.*)", line)
+            m = re.match("(?P<date>\d{4}-\d{2}-\d{2})(=(?P<postdate>\d{4}-\d{2}-\d{2}))?\s+(?P<description>.*)", line)
             if m:
                 if m.group("postdate") is not None:
                     transaction = Transaction(m.group("postdate"),m.group("description"),filename,linenum)
