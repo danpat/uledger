@@ -237,9 +237,14 @@ class Math(LedgerTest):
             DestAccount
 
         assert balance 2015-01-07 SourceAccount  $174
+        assert balance 2015-01-03 SourceAccount  $150
         """)
 
         self.ledger.parse(data.splitlines(),"TESTDATA")
+
+        balance = self.ledger.balance("SourceAccount","2015-01-06")
+        self.assertEquals(balance, {"$": 150 })
+
 
 
     def test_nobalance(self):
