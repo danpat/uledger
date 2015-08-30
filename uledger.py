@@ -129,8 +129,6 @@ class Ledger(object):
                     if commodity not in result:
                         result[commodity] = decimal.Decimal(0)
                     result[commodity] += b[account][commodity]
-            if len(result) == 0:
-                raise AccountNotFoundError(account)
         return result
 
     def commodities(self):
@@ -266,12 +264,14 @@ class Ledger(object):
             if m:
                 if not self.assertions:
                     continue
-                balance = self.balance(m.group("account"),m.group("asof"))
+                try:
+                    balance = self.balance(m.group("account"),m.group("asof"))
+                except AccountNotFoundError:
+                    balance = self.balance_children(m.group("account"),m.group("asof"))
                 amount = self.parseamount(m.group("amount"),filename,linenum)
 
-                if amount.value == 0 and amount.commodity not in balance:
-                    None
-                elif amount.commodity not in balance or balance[amount.commodity] != amount.value:
+                if not (amount.value == 0 and amount.commodity not in balance) and \
+                    (amount.commodity not in balance or balance[amount.commodity] != amount.value):
                     raise AssertionError(filename, linenum, "Account %s actual balance of %s does not match assertion value %s" % (m.group("account"),repr(balance), repr(amount)))
 
                 continue
