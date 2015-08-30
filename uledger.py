@@ -93,7 +93,7 @@ class Ledger(object):
     
     # We lexically sort the date keys, and start from
     # the beginning to get the current balance
-    def balance(self, account,asof=None):
+    def balance(self, account, asof=None):
 
         if account not in self.accounts:
             raise AccountNotFoundError(account)
@@ -111,6 +111,50 @@ class Ledger(object):
             else:
                 break
         return balances
+
+    def balances(self, asof=None, parents=False):
+        result = {}
+        for account in self.accounts:
+            result[account] = self.balance(account, asof)
+            if parents:
+                parent = None
+                for part in account.split(":"):
+                    if parent is None:
+                        parent = part
+                    else:
+                        parent += ":%s" % part
+
+                    if parent not in result:
+                        result[parent] = {}
+
+                    if parent != account:
+                        for commodity in result[account]:
+                            if commodity not in result[parent]:
+                                result[parent][commodity] = 0
+                            result[parent][commodity] += result[account][commodity]
+        return result
+
+    def commodities(self):
+        return self.commodities
+
+    def startdate(self):
+        start = None
+        for account in self.accounts:
+            datekeys = self.accounts[account].keys()
+            datekeys.sort()
+            if start is None or start > datekeys[0]:
+                start = datekeys[0]
+        return start
+
+    def enddate(self):
+        start = None
+        for account in self.accounts:
+            datekeys = self.accounts[account].keys()
+            datekeys.sort()
+            if start < datekeys[-1]:
+                start = datekeys[-1]
+        return start
+
 
     def maketransaction(self, transaction, posts, bucket = None):
         balanceaccount = bucket
@@ -243,7 +287,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=' some integers.')
     parser.add_argument('-f','--filename', required=True, help='filename to load')
-    parser.add_argument("command", default='balance', choices=['balance','register'])
+    parser.add_argument("command", default='balance', choices=['balance','register', 'web'])
     parser.add_argument('-a','--account', help='Apply to which account')
     parser.add_argument('-s','--start', help='Start at which date')
     parser.add_argument('-e','--end', help='End at which date')
@@ -269,23 +313,32 @@ if __name__ == "__main__":
         accountkeys = ledger.accounts.keys()
         accountkeys.sort()
 
+        enddate = args.end
+        # TODO: validate date formats
+
         maxlen = 0
         for account in accountkeys:
             maxlen = max(maxlen,len(account))
 
         for commodity in ledger.commodities:
             print commodity.rjust(10," "),
+
+        if enddate:
+            print "Balances asof %s" % enddate
         print "Account".ljust(maxlen+1," ")
         print "-" * (maxlen+1 + len(ledger.commodities)*11)
         for account in accountkeys:
-            #print ":".join(reversed(account.split(":"))).rjust(maxlen+1," "),
-            b = ledger.balance(account)
+            b = ledger.balance(account,enddate)
             for i, commodity in enumerate(ledger.commodities):
                 if commodity in b:
                     print str(b[commodity]).rjust(10," "),
                 else:
                     print "-".rjust(10," "),
             print account
+
+    elif args.command == "web":
+        import web
+        web.make_report(ledger, ".")
 
     elif args.command == "register":
         accountkeys = ledger.accounts.keys()
