@@ -381,6 +381,47 @@ class Math(LedgerTest):
         self.ledger.parse(data.splitlines(),"TESTDATA")
         self.assertEquals(self.ledger.balance("Savings"), {"$": decimal.Decimal("3370.44")})
 
+    def test_account_equation1(self):
+        data = textwrap.dedent("""
+        2015-01-01 Opening Balance
+            Equity:Owners Contributions   $-100
+            Assets:Bank                   $100
+
+        2015-01-01 Buying widgets
+            Liabilities:Credit Card       $-50
+            Expenses:Parts
+
+        2015-01-01 Some Income
+            Income:Consulting             $-200
+            Assets:Bank                   $200
+
+        assert equation 2015-01-02 Assets - Liabilities = Equity + Income - Expenses""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+    def test_account_equation2(self):
+        data = textwrap.dedent("""
+        2015-01-01 Opening Balance
+            Equity:Owners Contributions   $-100
+            Assets:Bank                   $100
+
+        2015-01-01 Buying widgets
+            Liabilities:Credit Card       $-50
+            Expenses:Parts
+
+        2015-01-01 Buying widgets 2
+            Liabilities:Credit Card       $-50
+            Something
+
+        2015-01-01 Some Income
+            Income:Consulting             $-200
+            Assets:Bank                   $200
+
+        assert equation 2015-01-02 Assets - Liabilities = Equity + Income - Expenses""")
+
+        with self.assertRaises(uledger.AssertionError):
+            self.ledger.parse(data.splitlines(),"TESTDATA")
+
 
 
 if __name__ == '__main__':

@@ -296,6 +296,46 @@ class Ledger(object):
 
                 continue
 
+            m = re.match("assert\s+equation\s+(?P<asof>\d{4}-\d{2}-\d{2})?\s*(?P<assetsaccount>.*?)\s+-\s+(?P<liabilitiesaccount>.*?)\s+=\s+(?P<equityaccount>.*?)\s+\+\s+(?P<incomeaccount>.*?)\s+-\s+(?P<expenseaccount>.*?)$", line)
+            if m:
+                if not self.assertions:
+                    continue
+                data = {}
+                for acct in ["assets","liabilities","equity","income","expense"]:
+                    try:
+                        balance = self.balance(m.group("%saccount" % acct),m.group("asof"))
+                    except AccountNotFoundError:
+                        balance = self.balance_children(m.group("%saccount" % acct),m.group("asof"))
+                    data[acct] = balance
+
+
+                # Assets + liabilities
+                left = {}
+                right = {}
+                for commodity in self.commodities:
+                    left[commodity] = decimal.Decimal(0)
+                    right[commodity] = decimal.Decimal(0)
+
+                    # Left
+                    if commodity in data["assets"]:
+                        left[commodity] += data["assets"][commodity]
+                    if commodity in data["liabilities"]:
+                        left[commodity] -= data["liabilities"][commodity]
+
+                    # Right
+                    if commodity in data["equity"]:
+                        right[commodity] += -1*data["equity"][commodity]
+                    if commodity in data["income"]:
+                        right[commodity] += -1*data["income"][commodity]
+                    if commodity in data["expense"]:
+                        right[commodity] -= -1*data["expense"][commodity]
+
+                if left != right:
+                    raise AssertionError(filename, linenum, "Accounting equation not satisified: %s != %s" % (repr(left), repr(right)))
+
+                continue
+
+
             raise ParseError(filename, linenum, "Don't know how to parse \"%s\"" % line)
     
         if transaction is not None:
