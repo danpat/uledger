@@ -331,14 +331,15 @@ class Math(LedgerTest):
         data = textwrap.dedent("""
         2015-01-01 Test
             Source:Account1    $50
-            Source:Account2    $50
-            Source:Account3    $-50
+            Source:Account2    50 CAD
+            Source:Account3    $50
             DestAccount
             """)
 
         self.ledger.parse(data.splitlines(),"TESTDATA")
 
-        self.assertEquals(self.ledger.balance_children("Source"), {"$":50})
+        self.assertEquals(self.ledger.balance("DestAccount"), {"$":-100,"CAD":-50})
+        self.assertEquals(self.ledger.balance_children("Source"), {"$":100,"CAD":50})
 
 
 if __name__ == '__main__':
