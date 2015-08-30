@@ -106,32 +106,31 @@ class Ledger(object):
             if asof is None or date <= asof:
                 for entry in self.accounts[account][date]:
                     if entry.amount.commodity not in balances:
-                        balances[entry.amount.commodity] = 0
+                        balances[entry.amount.commodity] = decimal.Decimal(0)
                     balances[entry.amount.commodity] += entry.amount.value
             else:
                 break
         return balances
 
-    def balances(self, asof=None, parents=False):
+    def balances(self, asof=None):
         result = {}
         for account in self.accounts:
             result[account] = self.balance(account, asof)
-            if parents:
-                parent = None
-                for part in account.split(":"):
-                    if parent is None:
-                        parent = part
-                    else:
-                        parent += ":%s" % part
+        return result
 
-                    if parent not in result:
-                        result[parent] = {}
-
-                    if parent != account:
-                        for commodity in result[account]:
-                            if commodity not in result[parent]:
-                                result[parent][commodity] = 0
-                            result[parent][commodity] += result[account][commodity]
+    # Fetches the balance of all sub-accounts that have this name as
+    # a prefix
+    def balance_children(self, prefix, asof=None):
+        b = self.balances(asof)
+        result = {}
+        if prefix not in b:
+            for account in [i for i in self.accounts if i.startswith(prefix)]:
+                for commodity in b[account]:
+                    if commodity not in result:
+                        result[commodity] = decimal.Decimal(0)
+                    result[commodity] += b[account][commodity]
+            if len(result) == 0:
+                raise AccountNotFoundError(account)
         return result
 
     def commodities(self):
@@ -327,8 +326,9 @@ if __name__ == "__main__":
             print "Balances asof %s" % enddate
         print "Account".ljust(maxlen+1," ")
         print "-" * (maxlen+1 + len(ledger.commodities)*11)
+        balances = ledger.balances(enddate)
         for account in accountkeys:
-            b = ledger.balance(account,enddate)
+            b = balances[account]
             for i, commodity in enumerate(ledger.commodities):
                 if commodity in b:
                     print str(b[commodity]).rjust(10," "),

@@ -327,6 +327,19 @@ class Math(LedgerTest):
         self.assertEquals("2015-01-01", self.ledger.startdate())
         self.assertEquals("2015-01-02", self.ledger.enddate())
 
+    def test_balance_children(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            Source:Account1    $50
+            Source:Account2    $50
+            Source:Account3    $-50
+            DestAccount
+            """)
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+        self.assertEquals(self.ledger.balance_children("Source"), {"$":50})
+
 
 if __name__ == '__main__':
     unittest.main()
