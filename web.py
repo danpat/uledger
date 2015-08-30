@@ -8,12 +8,16 @@ def make_category(f,org,category,balances,ledger,asof):
     f.write("<thead><tr><td colspan='2'>%s</td></tr></thead>" % category)
     f.write("<tbody>")
     for account in [i[len(org+":"+category)+1:] for i in accountnames if (org+":"+category in i and org+":"+category != i)]:
+        if len(balances[org+":"+category+":"+account]) == 0 or \
+                sum(balances[org+":"+category+":"+account].values()) == 0:
+                    continue
+
         f.write("<tr><td class='subcat'>%s</td><td class='total'>" % account)
         if len(balances[org+":"+category+":"+account]) == 0:
             f.write("-")
         else:
             f.write("<br/>".join(
-                "%s %.2f" % (commodity, amount) for (commodity,amount) in balances[org+":"+category+":"+account].items()
+                "%s %.2f" % (commodity, amount) for (commodity,amount) in balances[org+":"+category+":"+account].items() if amount != 0
             ))
         f.write("</tr>")
 
@@ -63,7 +67,7 @@ def make_report(ledger,destdir):
         table { border-collapse: collapse; width: 100%}
         td { vertical-align: top; }
         td.subcat { padding-left: 1em; }
-        .total { text-align: right }
+        .total { text-align: right; white-space: nowrap; }
         thead td { font-weight: bold; }
         tfoot td { font-weight: bold; }
         td { padding-top: 0.1rem; padding-bottom: 0.1rem; }
@@ -74,8 +78,6 @@ def make_report(ledger,destdir):
         f.write("<body>")
 
         for year in range(int(endyear),int(startyear),-1):
-            f.write("<div class='container year'>")
-            f.write("<h3>%d</h3>" % year)
             asof = "%d-12-31" % year
             balances = ledger.balances(asof)
 
@@ -84,6 +86,7 @@ def make_report(ledger,destdir):
                 orgs.add(account.split(":")[0])
 
             for org in orgs:
+                f.write("<div class='container year'>")
                 f.write("<h4>%s %d</h4>" % (org, year))
                 f.write("<div class='row'>")
                 for categories in [["Assets"],["Liabilities","Equity"]]:
@@ -102,6 +105,6 @@ def make_report(ledger,destdir):
                 f.write("</div>")
 
 
-            f.write("</div>")
+                f.write("</div>")
         f.write("</body>")
         f.write("</html>")
