@@ -320,17 +320,20 @@ class Ledger(object):
                     if commodity in data["assets"]:
                         left[commodity] += data["assets"][commodity]
                     if commodity in data["liabilities"]:
-                        left[commodity] -= data["liabilities"][commodity]
+                        left[commodity] += data["liabilities"][commodity]
 
                     # Right
                     if commodity in data["equity"]:
-                        right[commodity] += -1*data["equity"][commodity]
+                        right[commodity] -= data["equity"][commodity]
                     if commodity in data["income"]:
-                        right[commodity] += -1*data["income"][commodity]
+                        right[commodity] -= data["income"][commodity]
                     if commodity in data["expense"]:
-                        right[commodity] -= -1*data["expense"][commodity]
+                        right[commodity] -= data["expense"][commodity]
+
+
 
                 if left != right:
+                    print data
                     raise AssertionError(filename, linenum, "Accounting equation not satisified: %s != %s" % (repr(left), repr(right)))
 
                 continue
@@ -429,7 +432,7 @@ if __name__ == "__main__":
         while firstdate <= enddate:
             today = firstdate.strftime("%Y-%m-%d")
             for account in ledger.accounts:
-                if args.account is None or args.account == account:
+                if args.account is None or account.startswith(args.account):
                     if today in ledger.accounts[account]:
                         for transaction in ledger.accounts[account][today]:
                             if transaction.amount.commodity not in balances[account]:
@@ -438,7 +441,7 @@ if __name__ == "__main__":
 
                             if firstdate >= startdate:
                                 print today, str(balances[account][transaction.amount.commodity]).rjust(8," "), transaction.amount.commodity, str(transaction.amount.value).rjust(8," "), transaction.description
-                                if args.account is None:
+                                if args.account is None or account.startswith(args.account):
                                     print "\t",account
 
             firstdate += datetime.timedelta(days=1)
