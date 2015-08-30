@@ -1,7 +1,9 @@
 import os
 import shutil
 
-def make_category(f,org,category,balances,accountnames):
+def make_category(f,org,category,balances,ledger,asof):
+    accountnames = balances.keys()
+    accountnames.sort()
     f.write("<table>")
     f.write("<thead><tr><td colspan='2'>%s</td></tr></thead>" % category)
     f.write("<tbody>")
@@ -16,12 +18,13 @@ def make_category(f,org,category,balances,accountnames):
         f.write("</tr>")
 
     f.write("</tbody>")
-    f.write("<tfoot><tr><td>Total</td><td class='total'>")
-    if len(balances[org+":"+category]) == 0:
+    f.write("<tfoot><tr><td>%s</td><td class='total'>" % (org+":"+category))
+    if len(ledger.balance_children(org+":"+category,asof)) == 0:
         f.write("-")
     else:
+        f.write(ledger.balance_children(org+":"+category,asof).__repr__())
         f.write("<br/>".join(
-            "%s %.2f" % (commodity, amount) for (commodity,amount) in balances[org+":"+category].items()
+            "%s %.2f" % (commodity, amount) for (commodity,amount) in ledger.balance_children(org+":"+category,asof).items()
         ))
     f.write("</tr></tfoot>")
     f.write("</table>")
@@ -74,31 +77,30 @@ def make_report(ledger,destdir):
         for year in range(int(endyear),int(startyear),-1):
             f.write("<div class='container year'>")
             f.write("<h3>%d</h3>" % year)
-            balances = ledger.balances("%d-12-31" % year, parents=True)
-            accountnames = balances.keys()
-            accountnames.sort()
+            asof = "%d-12-31" % year
+            balances = ledger.balances(asof)
 
-            orgs = []
-            for account in accountnames:
-                if ":" not in account:
-                    orgs.append(account)
+            orgs = set()
+            for account in balances.keys():
+                orgs.add(account.split(":")[0])
 
             for org in orgs:
                 f.write("<h4>%s Balance Sheet</h4>" % org)
+                f.write("<h5>Balance Sheet</h5>")
                 f.write("<div class='row'>")
                 for categories in [["Assets"],["Liabilities","Equity"]]:
                     f.write("<div class='six columns'>")
                     for category in categories:
-                        make_category(f, org, category, balances, accountnames)
+                        make_category(f, org, category, balances, ledger, asof)
                     f.write("</div>")
                 f.write("</div>")
 
-                f.write("<h4>%s Income and Expenses</h4>" % org)
+                f.write("<h5>Income and Expenses</h5>")
                 f.write("<div class='row'>")
                 for categories in [["Income"],["Expenses"]]:
                     f.write("<div class='six columns'>")
                     for category in categories:
-                        make_category(f, org, category, balances, accountnames)
+                        make_category(f, org, category, balances, ledger, asof)
                     f.write("</div>")
                 f.write("</div>")
 
