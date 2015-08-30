@@ -69,14 +69,14 @@ class Ledger(object):
                 return Amount(a.commodity,(a.value*b).quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_HALF_UP))
     
         # $-1234.34
-        m = re.match("(?P<commodity>\$)\s*(?P<value>-?\d+(\.\d+)?)",amountstr)
+        m = re.match("(?P<commodity>\$)\s*(?P<value>-?[\d,]+(\.\d+)?)",amountstr)
         if m:
-            return Amount(m.group("commodity"),decimal.Decimal(m.group("value")))
+            return Amount(m.group("commodity"),decimal.Decimal(m.group("value").replace(",","")))
     
         # -123.43 CAD
-        m = re.match("(?P<value>-?\d+(\.\d+)?) (?P<commodity>\w+)",amountstr)
+        m = re.match("(?P<value>-?[\d,]+(\.\d+)?) (?P<commodity>\w+)",amountstr)
         if m:
-            return Amount(m.group("commodity"),decimal.Decimal(m.group("value")))
+            return Amount(m.group("commodity"),decimal.Decimal(m.group("value").replace(",","")))
 
         raise ParseError(filename, linenum, "Don't know how to interpret '%s' as a value, did you include a commodity type ($, USD, etc)?" % amountstr)
         return None
@@ -292,7 +292,7 @@ class Ledger(object):
 
                 if not (amount.value == 0 and amount.commodity not in balance) and \
                     (amount.commodity not in balance or balance[amount.commodity] != amount.value):
-                    raise AssertionError(filename, linenum, "Account %s actual balance of %s does not match assertion value %s" % (m.group("account"),repr(balance), repr(amount)))
+                    raise AssertionError(filename, linenum, "Account %s actual balance of %s on %s does not match assertion value %s" % (m.group("account"),m.group("asof"), repr(balance), repr(amount)))
 
                 continue
 

@@ -360,13 +360,26 @@ class Math(LedgerTest):
             Source:Account3    $50
             DestAccount
 
-        closeall 2015-01-01 Source DestAccount2""")
+        closeall 2015-01-01 Source  DestAccount2""")
 
         self.ledger.parse(data.splitlines(),"TESTDATA")
 
         self.assertEquals(self.ledger.balance("DestAccount"), {"$":-100,"CAD":-50})
         self.assertEquals(self.ledger.balance_children("Source"), {"$":0,"CAD":0})
         self.assertEquals(self.ledger.balance("DestAccount2"), {"$":100,"CAD":50})
+
+    def test_multitotal(self):
+        data = textwrap.dedent("""
+        bucket Savings
+        2015-07-15 July pay
+            Personal:Income:Mapbox                               $-4,791.67
+            Personal:Expenses:US Federal Income Tax              $716.15
+            Personal:Expenses:US Social Security                 $297.09
+            Personal:Expenses:US Medicare                        $69.48
+            Personal:Expenses:US District of Columbia State Income Tax  $338.51	""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+        self.assertEquals(self.ledger.balance("Savings"), {"$": decimal.Decimal("3370.44")})
 
 
 

@@ -84,8 +84,7 @@ def make_report(ledger,destdir):
                 orgs.add(account.split(":")[0])
 
             for org in orgs:
-                f.write("<h4>%s Balance Sheet</h4>" % org)
-                f.write("<h5>Balance Sheet</h5>")
+                f.write("<h4>%s %d</h4>" % (org, year))
                 f.write("<div class='row'>")
                 for categories in [["Assets"],["Liabilities","Equity"]]:
                     f.write("<div class='six columns'>")
@@ -94,7 +93,6 @@ def make_report(ledger,destdir):
                     f.write("</div>")
                 f.write("</div>")
 
-                f.write("<h5>Income and Expenses</h5>")
                 f.write("<div class='row'>")
                 for categories in [["Income"],["Expenses"]]:
                     f.write("<div class='six columns'>")
