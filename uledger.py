@@ -260,6 +260,26 @@ class Ledger(object):
                 self.aliases[m.group("alias")] = m.group("account")
                 continue
 
+            m = re.match("closeall\s+(?P<asof>\d{4}-\d{2}-\d{2})\s+(?P<prefix>.+?)\s\s+(?P<closingaccount>.*)",line)
+            if m:
+                transaction = Transaction(m.group("asof"),"Automatic closing transaction",filename,linenum)
+                posts = []
+                closing = {}
+                for account in self.accounts:
+                    if account.startswith(m.group("prefix")):
+                        balance = self.balance(account,m.group("asof"))
+                        for commodity,value in balance.items():
+                            if commodity not in closing:
+                                closing[commodity] = decimal.Decimal(0)
+                            closing[commodity] += value
+                            posts.append(Post(account,Amount(commodity,-1*value),filename,linenum))
+
+                self.maketransaction(transaction, posts, m.group("closingaccount"))
+                transaction = None
+                posts = None
+                continue
+
+
             m = re.match("assert\s+balance\s+(?P<asof>\d{4}-\d{2}-\d{2})?\s*(?P<account>.*?)\s\s+(?P<amount>.*)$",line)
             if m:
                 if not self.assertions:

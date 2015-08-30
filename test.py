@@ -62,6 +62,17 @@ class Parsing(LedgerTest):
         with self.assertRaises(uledger.AccountNotFoundError):
             balance = self.ledger.balance("Dest")
 
+    def test_bucketmulti(self):
+        data = textwrap.dedent("""
+        bucket Dest
+        2015-01-01 Dummy
+            Source  $50
+            Source  50 CAD
+            Dest2
+            """)
+        self.ledger.parse(data.splitlines(), "TESTDATA")
+        balance = self.ledger.balance("Dest2")
+        self.assertEquals(balance, {"$": -50,"CAD":-50 })
 
     def test_bucket(self):
         data = textwrap.dedent("""
@@ -340,6 +351,23 @@ class Math(LedgerTest):
 
         self.assertEquals(self.ledger.balance("DestAccount"), {"$":-100,"CAD":-50})
         self.assertEquals(self.ledger.balance_children("Source"), {"$":100,"CAD":50})
+
+    def test_closeall(self):
+        data = textwrap.dedent("""
+        2015-01-01 Test
+            Source:Account1    $50
+            Source:Account2    50 CAD
+            Source:Account3    $50
+            DestAccount
+
+        closeall 2015-01-01 Source DestAccount2""")
+
+        self.ledger.parse(data.splitlines(),"TESTDATA")
+
+        self.assertEquals(self.ledger.balance("DestAccount"), {"$":-100,"CAD":-50})
+        self.assertEquals(self.ledger.balance_children("Source"), {"$":0,"CAD":0})
+        self.assertEquals(self.ledger.balance("DestAccount2"), {"$":100,"CAD":50})
+
 
 
 if __name__ == '__main__':

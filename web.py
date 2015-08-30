@@ -22,7 +22,6 @@ def make_category(f,org,category,balances,ledger,asof):
     if len(ledger.balance_children(org+":"+category,asof)) == 0:
         f.write("-")
     else:
-        f.write(ledger.balance_children(org+":"+category,asof).__repr__())
         f.write("<br/>".join(
             "%s %.2f" % (commodity, amount) for (commodity,amount) in ledger.balance_children(org+":"+category,asof).items()
         ))
