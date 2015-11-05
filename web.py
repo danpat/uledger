@@ -22,7 +22,7 @@ def make_category(f,org,category,balances,ledger,asof):
         f.write("</tr>")
 
     f.write("</tbody>")
-    f.write("<tfoot><tr><td>%s</td><td class='total'>" % (org+":"+category))
+    f.write("<tfoot><tr><td>Total</td><td class='total'>")
     if len(ledger.balance_children(org+":"+category,asof)) == 0:
         f.write("-")
     else:
@@ -37,7 +37,7 @@ def make_report(ledger,destdir):
     startdate = ledger.startdate()
     enddate = ledger.enddate()
 
-    startyear = startdate.split("-")[0]
+    firstyear = startdate.split("-")[0]
     endyear = enddate.split("-")[0]
 
     # Year by year
@@ -50,7 +50,7 @@ def make_report(ledger,destdir):
     with open(os.path.join(destdir,"report.html"),"w") as f:
         f.write("<!DOCTYPE html>")
         f.write("<html><head><title>Report</title>")
-        
+
         f.write("""
         <link href="http://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
 
@@ -58,7 +58,7 @@ def make_report(ledger,destdir):
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/skeleton.css">
 
-        
+
         <style type='text/css'>
         * { font-family: sans-serif; margin: 0; padding: 0;}
         html { font-size: 50%; }
@@ -68,8 +68,8 @@ def make_report(ledger,destdir):
         td { vertical-align: top; }
         td.subcat { padding-left: 1em; }
         .total { text-align: right; white-space: nowrap; }
-        thead td { font-weight: bold; }
-        tfoot td { font-weight: bold; }
+        thead td { font-weight: bold; border-bottom: 2px solid black; padding-left: 1.25rem }
+        tfoot td { font-weight: bold; border-top: 3px double black;  padding-left: 1.25rem }
         td { padding-top: 0.1rem; padding-bottom: 0.1rem; }
         .category { float: left; padding: 1em; margin: 1em; width: 50% }
         .year { page-break-after:always; }
@@ -77,7 +77,7 @@ def make_report(ledger,destdir):
         f.write("</head>");
         f.write("<body>")
 
-        for year in range(int(endyear),int(startyear),-1):
+        for year in range(int(endyear),int(firstyear)-1,-1):
             asof = "%d-12-31" % year
             balances = ledger.balances(asof)
 
