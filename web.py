@@ -108,3 +108,5 @@ def make_report(ledger,destdir):
                 f.write("</div>")
         f.write("</body>")
         f.write("</html>")
+
+    print "Report written to %s" % os.path.join(destdir,"report.html")

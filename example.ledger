@@ -13,7 +13,7 @@
 ;  - When you receive income, subtract it from the income account
 ;    and add it to the account it went to
 ;
-; Income accounts read negative the more money you receive 
+; Income accounts read negative the more money you receive
 ;     (i.e. the source of the income, your job, has less money)
 ; Expense accounts go positive as you spend more money
 ; Liability accounts to more negative as you owe more money
@@ -23,24 +23,24 @@
 2015-05-30  Salary
     ; Recording the gross pay here makes it easier to just look at your books
     ; when it comes time to fill in your tax forms at the end of the year
-    Income:Day Job      $-1000
-    Expenses:Federal income tax withheld  $100
-    Expenses:State income tax withheld  $100
-    Assets:Checking Account
+    Personal:Income:Day Job      $-1000
+    Personal:Expenses:Federal income tax withheld  $100
+    Personal:Expenses:State income tax withheld  $100
+    Personal:Assets:Checking Account
 
 2015-06-01  Groceries
-    Expenses:Groceries   $22
-    Assets:Checking Account
+    Personal:Expenses:Groceries   $22
+    Personal:Assets:Checking Account
 
 2015-06-02  Car servicing
-    Expenses:Vehicle    $422.98
-    Liabilities:VISA
+    Personal:Expenses:Vehicle    $422.98
+    Personal:Liabilities:VISA
 
 ; The bucket command sets a default balancing account.  Unbalanced transactions
 ; will be balanced with an amount to this account.
-bucket Assets:Checking Account
+bucket Personal:Assets:Checking Account
 2015-06-03 Groceries again
-    Expenses:Groceries   $32.73
+    Personal:Expenses:Groceries   $32.73
 
 
 ; You can verify balances using the 'assert balance' command
@@ -48,16 +48,16 @@ bucket Assets:Checking Account
 ; seen so far matches what you've got.  This can be useful for verifying
 ; against account balances from your bank after you've entered a bunch
 ; of transactions.
-assert balance Expenses:Groceries  $54.73
+assert balance Personal:Expenses:Groceries  $54.73
 ; You can also use an 'asof' date for a balance check, helpful if you
 ; have a bank statement with a single balance and date, but you just
 ; want to append the check to the bottom of your ledger file (e.g.
 ; if doing one file per month).  This checks the balance at the end of
-; a certain date
-assert balance 2015-06-02 Expenses:Groceries  $22
+; a certain date, using data seen up until now
+assert balance 2015-06-02 Personal:Expenses:Groceries  $22
 
 ; You can define alias shortcuts (just single words)
-alias groceries Expenses:Groceries
+alias groceries Personal:Expenses:Groceries
 2015-06-04 Even more groceries
     groceries  $23.99
 
@@ -68,5 +68,10 @@ alias groceries Expenses:Groceries
 ; at the end of the year
 ; Note that the "bucket" account is still in effect
 2015-02-05 Chair from amazon
-    Expenses:Office  ($139 * 1.06)
-    Liabilities:State Sales Tax  ($1.39 * -0.06)
+    Personal:Expenses:Office  ($139 * 1.06)
+    Personal:Liabilities:State Sales Tax  ($1.39 * -0.06)
+
+
+; uledger also supports the "accounting equation", where you can check
+; that everything balances as it should
+assert equation 2015-07-01 Personal:Assets - Personal:Liabilities = Personal:Equity + Personal:Income - Personal:Expenses

@@ -61,18 +61,18 @@ class Ledger(object):
                 a = self.parseamount(m.group("left"),filename,linenum)
                 b = self.parseamount(m.group("right"),filename,linenum)
                 return Amount(a.commodity,a.value+b.value)
-    
+
             m = re.match("\(\s*(?P<left>.*?)\s+\*\s+(?P<right>-?\d+(\.\d+)?)\s*\)",amountstr)
             if m:
                 a = self.parseamount(m.group("left"),filename,linenum)
                 b = decimal.Decimal(m.group("right"))
                 return Amount(a.commodity,(a.value*b).quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_HALF_UP))
-    
+
         # $-1234.34
         m = re.match("(?P<commodity>\$)\s*(?P<value>-?[\d,]+(\.\d+)?)",amountstr)
         if m:
             return Amount(m.group("commodity"),decimal.Decimal(m.group("value").replace(",","")))
-    
+
         # -123.43 CAD
         m = re.match("(?P<value>-?[\d,]+(\.\d+)?) (?P<commodity>\w+)",amountstr)
         if m:
@@ -80,7 +80,7 @@ class Ledger(object):
 
         raise ParseError(filename, linenum, "Don't know how to interpret '%s' as a value, did you include a commodity type ($, USD, etc)?" % amountstr)
         return None
-    
+
     def makepost(self, account,date,description,commodity,value):
         self.commodities.add(commodity)
         if account not in self.accounts:
@@ -89,15 +89,15 @@ class Ledger(object):
             self.accounts[account][date] = []
 
         self.accounts[account][date].append(Entry(description,Amount(commodity,value)))
-    
-    
+
+
     # We lexically sort the date keys, and start from
     # the beginning to get the current balance
     def balance(self, account, asof=None):
 
         if account not in self.accounts:
             raise AccountNotFoundError(account)
-    
+
         balances = {}
         datekeys = self.accounts[account].keys()
         datekeys.sort()
@@ -158,7 +158,7 @@ class Ledger(object):
         values = {}
         if len(posts) == 0 or len(posts) == 1 and posts[0].amount.commodity is None:
             raise ParseError(transaction.filename, transaction.linenum, "No transactions")
-    
+
         for post in posts:
             account = post.account
             if account in self.aliases:
@@ -171,33 +171,33 @@ class Ledger(object):
             else:
                 if post.amount.commodity not in values:
                     values[post.amount.commodity] = 0
-    
+
                 values[post.amount.commodity] += post.amount.value
-    
+
                 self.makepost(account, transaction.date, transaction.description, post.amount.commodity, post.amount.value)
-    
+
         for commodity in values:
             if values[commodity] != decimal.Decimal("0"):
                 if balanceaccount is not None:
                     self.makepost(balanceaccount, transaction.date, transaction.description, commodity, -values[commodity])
                 else:
                     raise ParseError(post.filename, post.linenum, "Transaction does not balance: %f %s outstanding" % (values[commodity], commodity))
-    
+
     # Parses a file, can be called recursively
     def parse(self, reader,filename=None):
-    
+
         bucket = None
         transaction = None
         accountdef = None
         posts = []
         for linenum, line in enumerate(reader):
             linenum += 1
-    
+
             line = line.rstrip()
             m = re.match(" *;", line)
             if line == '' or m:
                 continue
-    
+
 
             if transaction is not None:
                 m = re.match("^\s+(?P<account>.*?)(\s\s+(?P<amount>.*))?$", line)
@@ -212,7 +212,7 @@ class Ledger(object):
                     self.maketransaction(transaction, posts, bucket)
                     posts = []
                     transaction = None
-    
+
             if accountdef is not None:
                 # Ignore things under accountdef for now
                 m = re.match("^\s+(.*)$",line)
@@ -220,7 +220,7 @@ class Ledger(object):
                     continue
                 else:
                     accountdef = None
-    
+
             m = re.match("(?P<date>\d{4}-\d{2}-\d{2})(=(?P<postdate>\d{4}-\d{2}-\d{2}))?\s+(?P<description>.*)", line)
             if m:
                 if m.group("postdate") is not None:
@@ -228,23 +228,23 @@ class Ledger(object):
                 else:
                     transaction = Transaction(m.group("date"),m.group("description"),filename,linenum)
                 continue
-    
+
             m = re.match("commodity\s+(?P<commodity>.*)", line)
             if m:
                 continue
-    
+
             m = re.match("account\s+(?P<account>.*)", line)
             if m:
                 accountdef = m.groups()
                 continue
-    
+
             m = re.match("include\s+(?P<filename>.*)",line)
             if m:
                 includefile = m.group("filename")
                 with open(includefile) as f:
                     self.parse(f,includefile)
                 continue
-    
+
             m = re.match("bucket\s+(?P<account>.*)",line)
             if m:
                 bucket = m.group("account")
@@ -254,7 +254,7 @@ class Ledger(object):
             if m:
                 print m.group("str")
                 continue
-    
+
             m = re.match("alias\s+(?P<alias>.*?)\s+(?P<account>.*)",line)
             if m:
                 self.aliases[m.group("alias")] = m.group("account")
@@ -340,10 +340,10 @@ class Ledger(object):
 
 
             raise ParseError(filename, linenum, "Don't know how to parse \"%s\"" % line)
-    
+
         if transaction is not None:
             self.maketransaction(transaction,posts,bucket)
-    
+
 
 if __name__ == "__main__":
 
