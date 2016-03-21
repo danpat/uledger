@@ -209,7 +209,12 @@ class Ledger(object):
                     posts.append(post)
                     continue
                 else:
-                    self.maketransaction(transaction, posts, bucket)
+                    try:
+                        self.maketransaction(transaction, posts, bucket)
+                    except Exception as e:
+                        e.args = (ParseError(filename, linenum, "Parse error: %s" % e),)
+                        raise
+
                     posts = []
                     transaction = None
 
