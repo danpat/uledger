@@ -1,7 +1,7 @@
 import os
 import shutil
 
-def make_category(f,org,category,balances,ledger,asof):
+def make_category(f,org,category,balances,ledger,asof,positive):
     accountnames = balances.keys()
     accountnames.sort()
     f.write("<table>")
@@ -17,7 +17,7 @@ def make_category(f,org,category,balances,ledger,asof):
             f.write("-")
         else:
             f.write("<br/>".join(
-                "%s %.2f" % (commodity, amount) for (commodity,amount) in balances[org+":"+category+":"+account].items() if amount != 0
+                "%s %.2f" % (commodity, amount * (1 if positive else -1)) for (commodity,amount) in balances[org+":"+category+":"+account].items() if amount != 0
             ))
         f.write("</tr>")
 
@@ -27,7 +27,7 @@ def make_category(f,org,category,balances,ledger,asof):
         f.write("-")
     else:
         f.write("<br/>".join(
-            "%s %.2f" % (commodity, amount) for (commodity,amount) in ledger.balance_children(org+":"+category,asof).items()
+            "%s %.2f" % (commodity, amount * (1 if positive else -1)) for (commodity,amount) in ledger.balance_children(org+":"+category,asof).items()
         ))
     f.write("</tr></tfoot>")
     f.write("</table>")
@@ -43,6 +43,8 @@ def make_report(ledger,destdir):
     # Year by year
 
     categories = ["Expenses","Assets","Liabilities","Income","Equity"]
+
+    positive = { "Expenses": True, "Assets":True, "Liabilities":False, "Income": False, "Equity":False }
 
     if not os.path.isdir(os.path.join(destdir,"css")):
         shutil.copytree(os.path.join(os.path.dirname(__file__), "css"), os.path.join(destdir,"css"))
@@ -92,7 +94,7 @@ def make_report(ledger,destdir):
                 for categories in [["Assets"],["Liabilities","Equity"]]:
                     f.write("<div class='six columns'>")
                     for category in categories:
-                        make_category(f, org, category, balances, ledger, asof)
+                        make_category(f, org, category, balances, ledger, asof, positive[category])
                     f.write("</div>")
                 f.write("</div>")
 
@@ -100,7 +102,7 @@ def make_report(ledger,destdir):
                 for categories in [["Income"],["Expenses"]]:
                     f.write("<div class='six columns'>")
                     for category in categories:
-                        make_category(f, org, category, balances, ledger, asof)
+                        make_category(f, org, category, balances, ledger, asof, positive[category])
                     f.write("</div>")
                 f.write("</div>")
 
