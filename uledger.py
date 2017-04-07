@@ -123,12 +123,11 @@ class Ledger(object):
     def balance_children(self, prefix, asof=None):
         b = self.balances(asof)
         result = {}
-        if prefix not in b:
-            for account in [i for i in self.accounts if i.startswith(prefix)]:
-                for commodity in b[account]:
-                    if commodity not in result:
-                        result[commodity] = decimal.Decimal(0)
-                    result[commodity] += b[account][commodity]
+        for account in [i for i in self.accounts if i.startswith(prefix)]:
+            for commodity in b[account]:
+                if commodity not in result:
+                    result[commodity] = decimal.Decimal(0)
+                result[commodity] += b[account][commodity]
         return result
 
     def commodities(self):
@@ -289,10 +288,7 @@ class Ledger(object):
             if m:
                 if not self.assertions:
                     continue
-                try:
-                    balance = self.balance(m.group("account"),m.group("asof"))
-                except AccountNotFoundError:
-                    balance = self.balance_children(m.group("account"),m.group("asof"))
+                balance = self.balance_children(m.group("account"),m.group("asof"))
                 amount = self.parseamount(m.group("amount"),filename,linenum)
 
                 if not (amount.value == 0 and amount.commodity not in balance) and \
@@ -307,10 +303,7 @@ class Ledger(object):
                     continue
                 data = {}
                 for acct in ["assets","liabilities","equity","income","expense"]:
-                    try:
-                        balance = self.balance(m.group("%saccount" % acct),m.group("asof"))
-                    except AccountNotFoundError:
-                        balance = self.balance_children(m.group("%saccount" % acct),m.group("asof"))
+                    balance = self.balance_children(m.group("%saccount" % acct),m.group("asof"))
                     data[acct] = balance
 
 

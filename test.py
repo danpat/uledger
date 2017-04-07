@@ -80,7 +80,7 @@ class Parsing(LedgerTest):
         2015-01-01 Dummy
             Source  $50
             Dest2
-            
+
         2015-01-02 Dummy2
             Source  $50""")
         self.ledger.parse(data.splitlines(), "TESTDATA")
@@ -140,9 +140,9 @@ class Math(LedgerTest):
         2015-01-01 Test
             Source1    ($3.20 * 1.0609)
             Dest
-            
+
         2015-01-02 Test2
-            Source2    ($3.20 * 1.0610) 
+            Source2    ($3.20 * 1.0610)
             Dest""")
 
         # calculated value should be 3.3952, which should round up because the 3rd digit is >=5
@@ -293,7 +293,7 @@ class Math(LedgerTest):
             SourceAccount2    $50
             SourceAccount3    $-50
             DestAccount
-            
+
         2015-01-02 Test2
             SourceAccount     $25
             DestAccount""")
@@ -328,7 +328,7 @@ class Math(LedgerTest):
             SourceAccount2    $50
             SourceAccount3    $-50
             DestAccount
-            
+
         2015-01-02 Test2
             SourceAccount     $25
             DestAccount""")
@@ -356,6 +356,7 @@ class Math(LedgerTest):
         data = textwrap.dedent("""
         2015-01-01 Test
             Source:Account1    $50
+            Source    $50
             Source:Account2    50 CAD
             Source:Account3    $50
             DestAccount
@@ -364,15 +365,15 @@ class Math(LedgerTest):
 
         self.ledger.parse(data.splitlines(),"TESTDATA")
 
-        self.assertEquals(self.ledger.balance("DestAccount"), {"$":-100,"CAD":-50})
+        self.assertEquals(self.ledger.balance("DestAccount"), {"$":-150,"CAD":-50})
         self.assertEquals(self.ledger.balance_children("Source"), {"$":0,"CAD":0})
-        self.assertEquals(self.ledger.balance("DestAccount2"), {"$":100,"CAD":50})
+        self.assertEquals(self.ledger.balance("DestAccount2"), {"$":150,"CAD":50})
 
     def test_multitotal(self):
         data = textwrap.dedent("""
         bucket Savings
         2015-07-15 July pay
-            Personal:Income:Mapbox                               $-4,791.67
+            Personal:Income:Example INC                          $-4,791.67
             Personal:Expenses:US Federal Income Tax              $716.15
             Personal:Expenses:US Social Security                 $297.09
             Personal:Expenses:US Medicare                        $69.48

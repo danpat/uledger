@@ -89,7 +89,7 @@ def make_report(ledger,destdir):
 
             for org in orgs:
                 f.write("<div class='container year'>")
-                f.write("<h4>%s %d</h4>" % (org, year))
+                f.write("<h4>%s EOY %d</h4>" % (org, year))
                 f.write("<div class='row'>")
                 for categories in [["Assets"],["Liabilities","Equity"]]:
                     f.write("<div class='six columns'>")
